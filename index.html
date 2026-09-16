@@ -1,0 +1,1059 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chromosome & Chromatid Model</title>
+<style>
+  body {
+    margin: 0;
+    font-family: "Segoe UI", "Tahoma", sans-serif;
+    background: #fcfcfc;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 12px;
+  }
+  h2 { margin: 0 0 16px 0; color: #2c3e50; text-align: center; }
+  .toolbar {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  button {
+    padding: 9px 18px;
+    border-radius: 8px;
+    border: none;
+    background: #fff;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    color: #34495e;
+    transition: all 0.2s;
+  }
+  button:hover {
+    background: #e9ecef;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    transform: translateY(-1px);
+  }
+  button.primary { background: #495057; color: white; }
+  button.primary:hover { background: #343a40; }
+  
+  #stage {
+    background: #ffffff;
+    border: 2px dashed #ced4da;
+    border-radius: 20px;
+    width: min(96vw, 1000px);
+    height: 600px;
+    position: relative;
+    overflow: hidden;
+    touch-action: none;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.04);
+  }
+  
+  .piece {
+    position: absolute;
+    cursor: grab;
+    user-select: none;
+    touch-action: none;
+    z-index: 10;
+  }
+  .piece:active { cursor: grabbing; }
+  .piece.dragging { z-index: 100; }
+
+  /* สไตล์สำหรับแขนโครโมโซมที่สามารถคลิกหมุนได้ 360 องศา และดับเบิ้ลคลิกเปลี่ยนสี */
+  .arm-group {
+    cursor: pointer;
+    transition: filter 0.15s;
+  }
+  .arm-group:hover {
+    filter: brightness(1.15);
+  }
+  .arm-group:active {
+    cursor: grabbing;
+  }
+
+  .instruction {
+    position: absolute;
+    bottom: 16px;
+    width: 100%;
+    text-align: center;
+    color: #868e96;
+    font-size: 13px;
+    pointer-events: none;
+    z-index: 200;
+  }
+
+  /* Color picker modal styling */
+  #colorPickerModal {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.3);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+  }
+  .modal-content {
+    background: #fff;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    align-items: center;
+    max-width: 90vw;
+  }
+  
+  /* สไตล์หน้าต่างข้อมูลการเรียนรู้ */
+  .study-modal-content {
+    max-width: 600px;
+    max-height: 80vh;
+    overflow-y: auto;
+    align-items: flex-start;
+    text-align: left;
+  }
+  .study-modal-content h3 {
+    margin-top: 0;
+    color: #2c3e50;
+    border-bottom: 2px solid #e9ecef;
+    padding-bottom: 10px;
+    width: 100%;
+  }
+  .study-modal-content h4 {
+    margin: 12px 0 4px 0;
+    color: #1971c2;
+  }
+  .study-modal-content p, .study-modal-content ul {
+    margin: 0 0 10px 0;
+    color: #495057;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  .study-modal-content ul {
+    padding-left: 20px;
+  }
+
+  .color-options {
+    display: flex;
+    gap: 10px;
+  }
+  .color-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 2px solid #ced4da;
+    cursor: pointer;
+    transition: transform 0.1s;
+  }
+  .color-btn:hover {
+    transform: scale(1.1);
+  }
+
+  .centrosome {
+    position: absolute;
+    width: 32px;
+    height: 32px;
+    background: radial-gradient(circle at 30% 30%, #fff 0%, #fa5252 40%, #c92a2a 80%, #8b0000 100%);
+    border: none;
+    border-radius: 50%;
+    cursor: grab;
+    user-select: none;
+    touch-action: none;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 2px 5px 10px rgba(0,0,0,0.3), inset -3px -3px 6px rgba(0,0,0,0.4);
+    transform: translate(-16px, -16px);
+  }
+  .centrosome:active { cursor: grabbing; }
+  .centrosome::after {
+    content: '';
+    width: 8px;
+    height: 8px;
+    background: radial-gradient(circle at 30% 30%, #fff 0%, #ced4da 100%);
+    border-radius: 50%;
+    box-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+  }
+  
+  /* จุดจับลากเส้นใยจาก Centrosome */
+  .spindle-handle {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    width: 18px;
+    height: 18px;
+    background: radial-gradient(circle at 30% 30%, #4dabf7 0%, #1971c2 70%, #0b365e 100%);
+    border: 1px solid #fff;
+    border-radius: 50%;
+    cursor: crosshair;
+    z-index: 60;
+    box-shadow: 1px 2px 4px rgba(0,0,0,0.4);
+  }
+  .spindle-handle:hover {
+    transform: scale(1.2);
+    background: radial-gradient(circle at 30% 30%, #74c0fc 0%, #1864ab 70%, #0b365e 100%);
+  }
+
+  /* Nuclear Membrane Style */
+  .nuclear-membrane {
+    position: absolute;
+    border: 3px dashed rgba(76, 110, 245, 0.6);
+    background: radial-gradient(circle, rgba(76, 110, 245, 0.02) 0%, rgba(76, 110, 245, 0.08) 100%);
+    border-radius: 50%;
+    cursor: move;
+    user-select: none;
+    touch-action: none;
+    z-index: 5;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 20px rgba(76, 110, 245, 0.15), inset 0 0 20px rgba(76, 110, 245, 0.15);
+  }
+  .nuclear-resize-handle {
+    position: absolute;
+    right: 8px;
+    bottom: 8px;
+    width: 22px;
+    height: 22px;
+    background: radial-gradient(circle at 30% 30%, #74c0fc 0%, #4c6ef5 70%, #364fc7 100%);
+    border: 2px solid #fff;
+    border-radius: 50%;
+    cursor: se-resize;
+    z-index: 6;
+    box-shadow: 1px 2px 5px rgba(0,0,0,0.4);
+  }
+  .nuclear-resize-handle:hover {
+    transform: scale(1.2);
+  }
+</style>
+</head>
+<body>
+
+<h2>Chromosome & Chromatid Model</h2>
+
+<div class="toolbar">
+  <button id="addCentrosomeBtn" class="primary">+ เพิ่มเซนโทรโซม</button>
+  <button id="addMembraneBtn" class="primary">+ เพิ่มเยื่อหุ้มนิวเคลียส</button>
+  <button id="splitBtn">แยกโครมาทิดทั้งหมด</button>
+  <button id="joinBtn">รวมโครมาทิดทั้งหมด</button>
+  <button id="clearLinesBtn">ล้างเส้นใยสปินเดิลทั้งหมด</button>
+  <button id="resetBtn">จัดเรียงใหม่ทั้งหมด</button>
+  <button id="studyMitosisBtn" style="background:#0b7285; color:white;">ศึกษาไมโทซิส</button>
+  <button id="studyMeiosisBtn" style="background:#862e9c; color:white;">ศึกษาไมโอซิส</button>
+</div>
+
+<div id="stage">
+  <svg id="spindleLayer" style="position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:1;"></svg>
+  <div class="instruction">คลิกที่ตัวโครมาทิดเพื่อย้าย | ลากจุดสีฟ้าเพื่อโยงเส้นใย | ดับเบิ้ลคลิกแขนเปลี่ยนสี</div>
+</div>
+
+<!-- Color picker modal -->
+<div id="colorPickerModal">
+  <div class="modal-content">
+    <h3 style="margin:0 0 8px 0; font-size:16px; color:#333;">เลือกสีสำหรับแขนโครโมโซม</h3>
+    <div class="color-options">
+      <div class="color-btn" style="background: #adb5bd;" data-color="#adb5bd"></div>
+      <div class="color-btn" style="background: #ced4da;" data-color="#ced4da"></div>
+      <div class="color-btn" style="background: #e03131;" data-color="#e03131"></div>
+      <div class="color-btn" style="background: #2f9e44;" data-color="#2f9e44"></div>
+      <div class="color-btn" style="background: #1971c2;" data-color="#1971c2"></div>
+      <div class="color-btn" style="background: #f08c00;" data-color="#f08c00"></div>
+      <div class="color-btn" style="background: #ae3ec9;" data-color="#ae3ec9"></div>
+    </div>
+    <button id="closeModal" style="margin-top:8px; padding:6px 12px;">ยกเลิก</button>
+  </div>
+</div>
+
+<!-- Modal ศึกษาการแบ่งเซลล์แบบไมโทซิส -->
+<div id="mitosisModal" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.4); display:none; justify-content:center; align-items:center; z-index:1000;">
+  <div class="modal-content study-modal-content">
+    <h3>ขั้นตอนการแบ่งเซลล์แบบไมโทซิส (Mitosis)</h3>
+    <p>เป็นการแบ่งเซลล์ร่างกาย (Somatic cell) เพื่อเจริญเติบโตหรือซ่อมแซมส่วนที่สึกหรอ ได้เซลล์ลูก 2 เซลล์ที่มีจำนวนโครโมโซมเท่าเซลล์แม่ (2n)</p>
+    
+    <h4>1. Prophase (ระยะโปรเฟส)</h4>
+    <ul>
+      <li>โครโมมาทินหดตัวสั้นลงเป็นโครโมโซมที่ชัดเจน (1 โครโมโซมมี 2 โครมาทิด)</li>
+      <li>เยื่อหุ้มนิวเคลียสและนิวคลีโอลัสเริ่มสลายตัว</li>
+      <li>เซนโทรโซมเคลื่อนที่ไปคนละขั้วของเซลล์ และเริ่มสร้างเส้นใยสปินเดิล</li>
+    </ul>
+
+    <h4>2. Metaphase (ระยะเมตาเฟส)</h4>
+    <ul>
+      <li>เส้นใยสปินเดิลจับกับโครโมโซมที่ตำแหน่งเซนโทรเมียร์ (หรือไคเนโตคอร์)</li>
+      <li>โครโมโซมถูกดึงมาเรียงตัวอยู่บริเวณกึ่งกลางเซลล์ (Metaphase plate)</li>
+      <li>เป็นระยะที่โครโมโซมหดตัวสั้นที่สุด เหมาะแก่การนับจำนวน</li>
+    </ul>
+
+    <h4>3. Anaphase (ระยะแอนาเฟส)</h4>
+    <ul>
+      <li>เส้นใยสปินเดิลหดตัว ดึงให้ <strong>ซิสเตอร์โครมาทิด (Sister chromatids)</strong> แยกออกจากกัน</li>
+      <li>โครมาทิดที่แยกจากกันจะถูกดึงไปยังขั้วเซลล์คนละด้าน (ตอนนี้แต่ละเส้นถือเป็น 1 โครโมโซมใหม่)</li>
+    </ul>
+
+    <h4>4. Telophase (ระยะเทโลเฟส)</h4>
+    <ul>
+      <li>โครโมโซมเดินทางไปถึงขั้วเซลล์และเริ่มคลายตัวเป็นเส้นใยยาว</li>
+      <li>มีการสร้างเยื่อหุ้มนิวเคลียสและนิวคลีโอลัสขึ้นมาใหม่ล้อมรอบโครโมโซม 2 กลุ่ม</li>
+      <li>เกิดการแบ่งไซโทพลาซึม (Cytokinesis) ได้เป็น 2 เซลล์ใหม่</li>
+    </ul>
+
+    <button id="closeMitosis" style="margin-top:16px; padding:8px 16px; width:100%;" class="primary">ปิดหน้าต่าง</button>
+  </div>
+</div>
+
+<!-- Modal ศึกษาการแบ่งเซลล์แบบไมโอซิส -->
+<div id="meiosisModal" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.4); display:none; justify-content:center; align-items:center; z-index:1000;">
+  <div class="modal-content study-modal-content">
+    <h3>ขั้นตอนการแบ่งเซลล์แบบไมโอซิส (Meiosis)</h3>
+    <p>เป็นการแบ่งเซลล์สืบพันธุ์ (Sex cell) มีการแบ่งนิวเคลียส 2 รอบ ได้เซลล์ลูก 4 เซลล์ที่มีจำนวนโครโมโซมลดลงครึ่งหนึ่ง (n) และมีความหลากหลายทางพันธุกรรม</p>
+    
+    <h4>Meiosis I (ไมโอซิส 1) - ลดจำนวนโครโมโซมครึ่งหนึ่ง</h4>
+    <ul>
+      <li><strong>Prophase I:</strong> โฮโมโลกัสโครโมโซม (โครโมโซมคู่เหมือน) มาจับคู่กัน (Synapsis) และเกิดการแลกเปลี่ยนชิ้นส่วนของยีนระหว่างโครมาทิดที่ไม่ใช่พี่น้องกัน <strong>(Crossing over)</strong> ทำให้เกิดความหลากหลาย</li>
+      <li><strong>Metaphase I:</strong> โฮโมโลกัสโครโมโซมเรียงตัวกันเป็น "คู่" อยู่บริเวณกึ่งกลางเซลล์</li>
+      <li><strong>Anaphase I:</strong> เส้นใยสปินเดิลดึงแยก <strong>โฮโมโลกัสโครโมโซม</strong> ออกจากกันไปยังขั้วเซลล์ (แต่ละโครโมโซมยังมี 2 โครมาทิด)</li>
+      <li><strong>Telophase I:</strong> เกิดนิวเคลียสใหม่ 2 นิวเคลียส โครโมโซมลดลงเหลือ n</li>
+    </ul>
+
+    <h4>Meiosis II (ไมโอซิส 2) - แยกซิสเตอร์โครมาทิด</h4>
+    <p><em>(คล้ายกับการแบ่งแบบไมโทซิส)</em></p>
+    <ul>
+      <li><strong>Prophase II:</strong> เยื่อหุ้มนิวเคลียสสลายตัว เส้นใยสปินเดิลก่อตัว</li>
+      <li><strong>Metaphase II:</strong> โครโมโซม (ที่มี 2 โครมาทิด) เรียงตัวกึ่งกลางเซลล์</li>
+      <li><strong>Anaphase II:</strong> เส้นใยสปินเดิลดึงแยก <strong>ซิสเตอร์โครมาทิด</strong> ออกจากกันไปยังคนละขั้วเซลล์</li>
+      <li><strong>Telophase II:</strong> เกิดนิวเคลียสใหม่ ได้เซลล์ลูกทั้งหมด 4 เซลล์ ที่มีโครโมโซม 1 ชุด (n)</li>
+    </ul>
+
+    <button id="closeMeiosis" style="margin-top:16px; padding:8px 16px; width:100%;" class="primary">ปิดหน้าต่าง</button>
+  </div>
+</div>
+
+<script>
+const stage = document.getElementById('stage');
+const spindleLayer = document.getElementById('spindleLayer');
+const colorModal = document.getElementById('colorPickerModal');
+let activeArmCallback = null;
+
+// โครโมโซม 4 คู่ สีเทาทั้งหมด แถบยีนหลากหลายแบบ (หนา, กลาง, เล็ก) ขยับมาไว้ด้านบนซ้ายของกรอบเส้นประ
+const chromosomes = [
+  { 
+    id: 'chr1', color: '#adb5bd', scale: 1.0, initX: 140, initY: 90, 
+    topA: -20, botA: -160, topB: 20, botB: 160, 
+    bandsTop: [{ratio: 0.35, width: 8, height: 3}, {ratio: 0.7, width: 4, height: 2}], 
+    bandsBot: [{ratio: 0.25, width: 10, height: 4}, {ratio: 0.55, width: 4, height: 2}, {ratio: 0.8, width: 6, height: 3}] 
+  },
+  { 
+    id: 'chr2', color: '#adb5bd', scale: 1.0, initX: 210, initY: 100, 
+    topA: -20, botA: -160, topB: 20, botB: 160, 
+    bandsTop: [{ratio: 0.35, width: 8, height: 3}, {ratio: 0.7, width: 4, height: 2}], 
+    bandsBot: [{ratio: 0.25, width: 10, height: 4}, {ratio: 0.55, width: 4, height: 2}, {ratio: 0.8, width: 6, height: 3}] 
+  },
+  { 
+    id: 'chr3', color: '#ced4da', scale: 0.85, initX: 155, initY: 300, 
+    topA: -25, botA: -155, topB: 25, botB: 155, 
+    bandsTop: [{ratio: 0.4, width: 6, height: 3}, {ratio: 0.75, width: 10, height: 4}], 
+    bandsBot: [{ratio: 0.3, width: 4, height: 2}, {ratio: 0.65, width: 8, height: 3}] 
+  },
+  { 
+    id: 'chr4', color: '#ced4da', scale: 0.85, initX: 225, initY: 310, 
+    topA: -25, botA: -155, topB: 25, botB: 155, 
+    bandsTop: [{ratio: 0.4, width: 6, height: 3}, {ratio: 0.75, width: 10, height: 4}], 
+    bandsBot: [{ratio: 0.3, width: 4, height: 2}, {ratio: 0.65, width: 8, height: 3}] 
+  }
+];
+
+const pieces = [];
+let spindleLines = []; // เก็บรายการเส้นเชื่อม { fromCentrosome, targetItem, x2, y2 }
+let drawingLine = null; // ข้อมูลขณะกำลังลากเส้น
+
+// Centrosome เริ่มต้น 1 อัน
+const centrosomes = [
+  { id: 'centrosome1', x: 80, y: 300, element: null }
+];
+
+// เก็บรายการ Nuclear Membranes
+const membranes = [];
+
+function initCentrosomes() {
+  centrosomes.forEach(c => createCentrosomeElement(c));
+}
+
+function createCentrosomeElement(cData) {
+  const el = document.createElement('div');
+  el.className = 'centrosome';
+  el.style.left = cData.x + 'px';
+  el.style.top = cData.y + 'px';
+  
+  // ปุ่มจุดสีฟ้าสำหรับลากเส้นเชื่อม
+  const handle = document.createElement('div');
+  handle.className = 'spindle-handle';
+  el.appendChild(handle);
+  
+  stage.appendChild(el);
+  cData.element = el;
+  
+  makeDraggableCentrosome(cData);
+  makeSpindleDraggable(handle, cData);
+}
+
+// ปุ่มกดเพิ่ม Centrosome ใหม่
+document.getElementById('addCentrosomeBtn').addEventListener('click', () => {
+  const newId = 'centrosome_' + Date.now();
+  const newC = {
+    id: newId,
+    x: 100 + Math.random() * 80,
+    y: 150 + Math.random() * 300,
+    element: null
+  };
+  centrosomes.push(newC);
+  createCentrosomeElement(newC);
+});
+
+// ปุ่มกดเพิ่ม Nuclear Membrane ใหม่
+document.getElementById('addMembraneBtn').addEventListener('click', () => {
+  const newM = {
+    id: 'membrane_' + Date.now(),
+    x: 220,
+    y: 180,
+    size: 260,
+    element: null
+  };
+  membranes.push(newM);
+  createMembraneElement(newM);
+});
+
+function createMembraneElement(mData) {
+  const el = document.createElement('div');
+  el.className = 'nuclear-membrane';
+  el.style.left = mData.x + 'px';
+  el.style.top = mData.y + 'px';
+  el.style.width = mData.size + 'px';
+  el.style.height = mData.size + 'px';
+
+  const resizeHandle = document.createElement('div');
+  resizeHandle.className = 'nuclear-resize-handle';
+  el.appendChild(resizeHandle);
+
+  stage.appendChild(el);
+  mData.element = el;
+
+  makeDraggableMembrane(mData, el);
+  makeResizableMembrane(mData, el, resizeHandle);
+}
+
+function makeDraggableMembrane(mData, el) {
+  let startX, startY, origLeft, origTop, dragging = false;
+
+  function pointerDown(e) {
+    if (e.target.classList.contains('nuclear-resize-handle')) return;
+    dragging = true;
+    el.style.zIndex = 100;
+    const p = getPoint(e);
+    startX = p.x;
+    startY = p.y;
+    origLeft = mData.x;
+    origTop = mData.y;
+
+    document.addEventListener('mousemove', pointerMove);
+    document.addEventListener('mouseup', pointerUp);
+    document.addEventListener('touchmove', pointerMove, { passive: false });
+    document.addEventListener('touchend', pointerUp);
+
+    if (e.cancelable) e.preventDefault();
+  }
+
+  function pointerMove(e) {
+    if (!dragging) return;
+    const p = getPoint(e);
+    const dx = p.x - startX;
+    const dy = p.y - startY;
+
+    mData.x = origLeft + dx;
+    mData.y = origTop + dy;
+    el.style.left = mData.x + 'px';
+    el.style.top = mData.y + 'px';
+    if (e.cancelable) e.preventDefault();
+  }
+
+  function pointerUp() {
+    if (!dragging) return;
+    dragging = false;
+    el.style.zIndex = 5;
+    document.removeEventListener('mousemove', pointerMove);
+    document.removeEventListener('mouseup', pointerUp);
+    document.removeEventListener('touchmove', pointerMove);
+    document.removeEventListener('touchend', pointerUp);
+  }
+
+  el.addEventListener('mousedown', pointerDown);
+  el.addEventListener('touchstart', pointerDown, { passive: false });
+}
+
+function makeResizableMembrane(mData, el, handleEl) {
+  let startX, startY, origSize, resizing = false;
+
+  function startResize(e) {
+    e.stopPropagation();
+    resizing = true;
+    el.style.zIndex = 100;
+    const p = getPoint(e);
+    startX = p.x;
+    startY = p.y;
+    origSize = mData.size;
+
+    document.addEventListener('mousemove', onResizeMove);
+    document.addEventListener('mouseup', onResizeUp);
+    document.addEventListener('touchmove', onResizeMove, { passive: false });
+    document.addEventListener('touchend', onResizeUp);
+
+    if (e.cancelable) e.preventDefault();
+  }
+
+  function onResizeMove(e) {
+    if (!resizing) return;
+    const p = getPoint(e);
+    const dx = p.x - startX;
+    const dy = p.y - startY;
+    const delta = Math.max(dx, dy);
+
+    let newSize = Math.max(100, origSize + delta);
+    mData.size = newSize;
+    el.style.width = newSize + 'px';
+    el.style.height = newSize + 'px';
+
+    if (e.cancelable) e.preventDefault();
+  }
+
+  function onResizeUp() {
+    if (!resizing) return;
+    resizing = false;
+    el.style.zIndex = 5;
+    document.removeEventListener('mousemove', onResizeMove);
+    document.removeEventListener('mouseup', onResizeUp);
+    document.removeEventListener('touchmove', onResizeMove);
+    document.removeEventListener('touchend', onResizeUp);
+  }
+
+  handleEl.addEventListener('mousedown', startResize);
+  handleEl.addEventListener('touchstart', startResize, { passive: false });
+}
+
+function makeDraggableCentrosome(cData) {
+  const el = cData.element;
+  let startX, startY, origLeft, origTop, dragging = false;
+
+  function pointerDown(e) {
+    if (e.target.classList.contains('spindle-handle')) return;
+    dragging = true;
+    el.classList.add('dragging');
+    const p = getPoint(e);
+    startX = p.x;
+    startY = p.y;
+    origLeft = cData.x;
+    origTop = cData.y;
+    
+    document.addEventListener('mousemove', pointerMove);
+    document.addEventListener('mouseup', pointerUp);
+    document.addEventListener('touchmove', pointerMove, { passive: false });
+    document.addEventListener('touchend', pointerUp);
+    
+    if (e.cancelable) e.preventDefault();
+  }
+
+  function pointerMove(e) {
+    if (!dragging) return;
+    const p = getPoint(e);
+    const dx = p.x - startX;
+    const dy = p.y - startY;
+    
+    cData.x = origLeft + dx;
+    cData.y = origTop + dy;
+    el.style.left = cData.x + 'px';
+    el.style.top = cData.y + 'px';
+    
+    redrawSpindleLines();
+    if (e.cancelable) e.preventDefault();
+  }
+
+  function pointerUp() {
+    if (!dragging) return;
+    dragging = false;
+    el.classList.remove('dragging');
+    
+    document.removeEventListener('mousemove', pointerMove);
+    document.removeEventListener('mouseup', pointerUp);
+    document.removeEventListener('touchmove', pointerMove);
+    document.removeEventListener('touchend', pointerUp);
+  }
+
+  el.addEventListener('mousedown', pointerDown);
+  el.addEventListener('touchstart', pointerDown, { passive: false });
+}
+
+function makeSpindleDraggable(handleEl, cData) {
+  function startDraw(e) {
+    e.stopPropagation();
+    const p = getPoint(e);
+    const stageRect = stage.getBoundingClientRect();
+    
+    drawingLine = {
+      startX: cData.x,
+      startY: cData.y,
+      currentX: p.x - stageRect.left,
+      currentY: p.y - stageRect.top
+    };
+
+    function onMove(me) {
+      const mp = getPoint(me);
+      drawingLine.currentX = mp.x - stageRect.left;
+      drawingLine.currentY = mp.y - stageRect.top;
+      redrawSpindleLines();
+      if (me.cancelable) me.preventDefault();
+    }
+
+    function onUp(ue) {
+      const upP = getPoint(ue);
+      const targetX = upP.x - stageRect.left;
+      const targetY = upP.y - stageRect.top;
+      
+      let connectedTarget = null;
+      pieces.forEach(pObj => {
+        [pObj.a, pObj.b].forEach(item => {
+          const centX = item.x + 70;
+          const centY = item.y + 100;
+          const dist = Math.hypot(targetX - centX, targetY - centY);
+          if (dist < 25) {
+            connectedTarget = item;
+          }
+        });
+      });
+
+      spindleLines.push({
+        fromCentrosome: cData.id,
+        targetItem: connectedTarget,
+        x2: connectedTarget ? null : targetX,
+        y2: connectedTarget ? null : targetY
+      });
+
+      drawingLine = null;
+      redrawSpindleLines();
+
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      document.removeEventListener('touchmove', onMove);
+      document.removeEventListener('touchend', onUp);
+    }
+
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+    document.addEventListener('touchmove', onMove, { passive: false });
+    document.addEventListener('touchend', onUp);
+
+    if (e.cancelable) e.preventDefault();
+  }
+
+  handleEl.addEventListener('mousedown', startDraw);
+  handleEl.addEventListener('touchstart', startDraw, { passive: false });
+}
+
+function getPoint(e) {
+  if (e.touches && e.touches.length) {
+    return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+  }
+  return { x: e.clientX, y: e.clientY };
+}
+
+function redrawSpindleLines() {
+  let svgContent = '';
+  
+  spindleLines.forEach(line => {
+    const cent = centrosomes.find(c => c.id === line.fromCentrosome);
+    if (!cent) return;
+    
+    let x2, y2;
+    if (line.targetItem) {
+      x2 = line.targetItem.x + 70;
+      y2 = line.targetItem.y + 100;
+    } else {
+      x2 = line.x2;
+      y2 = line.y2;
+    }
+
+    svgContent += `<line x1="${cent.x}" y1="${cent.y}" x2="${x2}" y2="${y2}" stroke="#fa5252" stroke-width="2.5" stroke-dasharray="5,5" opacity="0.8"/>`;
+  });
+
+  if (drawingLine) {
+    svgContent += `<line x1="${drawingLine.startX}" y1="${drawingLine.startY}" x2="${drawingLine.currentX}" y2="${drawingLine.currentY}" stroke="#228be6" stroke-width="2.5" stroke-dasharray="4,4" opacity="0.9"/>`;
+  }
+
+  spindleLayer.innerHTML = svgContent;
+}
+
+function updateChromatidSVG(elData) {
+  const { topColor, botColor, scale, topAngle, botAngle, bandsTop, bandsBot } = elData;
+  const L_top = 55 * scale;
+  const L_bot = 75 * scale;
+  const uniqueId = elData.id;
+
+  let topBandsSvg = '';
+  bandsTop.forEach((b) => {
+    topBandsSvg += `<rect x="-7" y="-${L_top * b.ratio}" width="14" height="${b.height}" rx="1" fill="#343a40" opacity="0.85"/>`;
+  });
+
+  let botBandsSvg = '';
+  bandsBot.forEach((b) => {
+    botBandsSvg += `<rect x="-7" y="-${L_bot * b.ratio}" width="14" height="${b.height}" rx="1" fill="#343a40" opacity="0.85"/>`;
+  });
+
+  const svgContent = `
+    <svg width="140" height="200" viewBox="0 0 140 200" style="overflow:visible; filter: drop-shadow(3px 6px 8px rgba(0,0,0,0.3));">
+      <defs>
+        <clipPath id="clipTop-${uniqueId}">
+          <rect x="-9" y="-${L_top}" width="18" height="${L_top}" rx="9" />
+        </clipPath>
+        <clipPath id="clipBot-${uniqueId}">
+          <rect x="-9" y="-${L_bot}" width="18" height="${L_bot}" rx="9" />
+        </clipPath>
+        
+        <!-- 3D Shading Gradients -->
+        <linearGradient id="cylinder-${uniqueId}" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="#000" stop-opacity="0.55"/>
+          <stop offset="15%" stop-color="#000" stop-opacity="0.1"/>
+          <stop offset="35%" stop-color="#fff" stop-opacity="0.65"/>
+          <stop offset="55%" stop-color="#fff" stop-opacity="0.1"/>
+          <stop offset="85%" stop-color="#000" stop-opacity="0.25"/>
+          <stop offset="100%" stop-color="#000" stop-opacity="0.75"/>
+        </linearGradient>
+        
+        <radialGradient id="sphere-${uniqueId}" cx="35%" cy="35%" r="65%">
+          <stop offset="0%" stop-color="#ffffff" stop-opacity="0.9"/>
+          <stop offset="25%" stop-color="#ffffff" stop-opacity="0.3"/>
+          <stop offset="70%" stop-color="#000000" stop-opacity="0.6"/>
+          <stop offset="100%" stop-color="#000000" stop-opacity="0.9"/>
+        </radialGradient>
+      </defs>
+
+      <!-- แขนบน (p arm) -->
+      <g class="arm-group" data-arm="top" transform="translate(70, 100) rotate(${topAngle})">
+        <rect x="-9" y="-${L_top}" width="18" height="${L_top}" rx="9" fill="#212529"/>
+        <rect x="-7" y="-${L_top + 1}" width="14" height="${L_top}" rx="7" fill="${topColor}"/>
+        <g clip-path="url(#clipTop-${uniqueId})">
+          ${topBandsSvg}
+        </g>
+        <!-- 3D Overlay -->
+        <rect x="-7" y="-${L_top + 1}" width="14" height="${L_top}" rx="7" fill="url(#cylinder-${uniqueId})" pointer-events="none"/>
+      </g>
+      
+      <!-- แขนล่าง (q arm) -->
+      <g class="arm-group" data-arm="bot" transform="translate(70, 100) rotate(${botAngle})">
+        <rect x="-9" y="-${L_bot}" width="18" height="${L_bot}" rx="9" fill="#212529"/>
+        <rect x="-7" y="-${L_bot + 1}" width="14" height="${L_bot}" rx="7" fill="${botColor}"/>
+        <g clip-path="url(#clipBot-${uniqueId})">
+          ${botBandsSvg}
+        </g>
+        <!-- 3D Overlay -->
+        <rect x="-7" y="-${L_bot + 1}" width="14" height="${L_bot}" rx="7" fill="url(#cylinder-${uniqueId})" pointer-events="none"/>
+      </g>
+
+      <!-- เซนโทรเมียร์ (Centromere) 3D -->
+      <circle cx="70" cy="100" r="9" fill="#f8f9fa" stroke="#212529" stroke-width="1.5" />
+      <circle cx="70" cy="100" r="8.5" fill="url(#sphere-${uniqueId})" pointer-events="none" />
+      <circle cx="70" cy="100" r="2.5" fill="#212529" opacity="0.8"/>
+    </svg>
+  `;
+  elData.element.innerHTML = svgContent;
+  bindArmInteractions(elData);
+}
+
+function createPiece(id, color, scale, isRight, partnerId, topAngle, botAngle, initX, initY, bandsTop, bandsBot) {
+  const el = document.createElement('div');
+  el.className = 'piece';
+  el.id = id;
+  stage.appendChild(el);
+
+  const elData = {
+    id, topColor: color, botColor: color, scale, isRight, partnerId,
+    topAngle, botAngle, bandsTop, bandsBot,
+    element: el,
+    x: initX, y: initY
+  };
+
+  updateChromatidSVG(elData);
+  makeDraggableBody(elData);
+  return elData;
+}
+
+chromosomes.forEach(c => {
+  const idA = c.id + '_left';
+  const idB = c.id + '_right';
+  
+  const pieceA = createPiece(idA, c.color, c.scale, false, idB, c.topA, c.botA, c.initX - 18, c.initY, c.bandsTop, c.bandsBot);
+  const pieceB = createPiece(idB, c.color, c.scale, true, idA, c.topB, c.botB, c.initX + 18, c.initY, c.bandsTop, c.bandsBot);
+  
+  pieces.push({ a: pieceA, b: pieceB, initX: c.initX, initY: c.initY });
+});
+
+function bindArmInteractions(elData) {
+  const armGroups = elData.element.querySelectorAll('.arm-group');
+  
+  armGroups.forEach(group => {
+    const armType = group.dataset.arm;
+    
+    function onArmPointerDown(e) {
+      e.stopPropagation();
+      const rect = elData.element.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 2;
+      
+      function onArmPointerMove(moveEvent) {
+        const mX = moveEvent.touches ? moveEvent.touches[0].clientX : moveEvent.clientX;
+        const mY = moveEvent.touches ? moveEvent.touches[0].clientY : moveEvent.clientY;
+        
+        const rad = Math.atan2(mY - centerY, mX - centerX);
+        let deg = rad * (180 / Math.PI) + 90;
+        
+        // ปรับมุมให้อยู่ในช่วง [0, 360)
+        while (deg < 0) deg += 360;
+        while (deg >= 360) deg -= 360;
+
+        if (armType === 'top') {
+          // แขนบนหมุนได้เฉพาะด้านบน 180 องศา (ช่วง -90° ถึง +90°)
+          let normDeg = deg > 180 ? deg - 360 : deg;
+          elData.topAngle = Math.max(-90, Math.min(90, normDeg));
+        } else {
+          // แขนล่างหมุนได้เฉพาะด้านล่าง 180 องศา (ช่วง 90° ถึง 270°)
+          if (deg < 90) {
+            elData.botAngle = 90;
+          } else if (deg > 270) {
+            elData.botAngle = 270;
+          } else {
+            elData.botAngle = deg;
+          }
+        }
+        updateChromatidSVG(elData);
+      }
+      
+      function onArmPointerUp() {
+        document.removeEventListener('mousemove', onArmPointerMove);
+        document.removeEventListener('mouseup', onArmPointerUp);
+        document.removeEventListener('touchmove', onArmPointerMove);
+        document.removeEventListener('touchend', onArmPointerUp);
+      }
+      
+      document.addEventListener('mousemove', onArmPointerMove);
+      document.addEventListener('mouseup', onArmPointerUp);
+      document.addEventListener('touchmove', onArmPointerMove, { passive: false });
+      document.addEventListener('touchend', onArmPointerUp);
+      
+      if (e.cancelable) e.preventDefault();
+    }
+    
+    group.addEventListener('mousedown', onArmPointerDown);
+    group.addEventListener('touchstart', onArmPointerDown, { passive: false });
+
+    group.addEventListener('dblclick', (e) => {
+      e.stopPropagation();
+      colorModal.style.display = 'flex';
+      activeArmCallback = (newColor) => {
+        if (armType === 'top') {
+          elData.topColor = newColor;
+        } else {
+          elData.botColor = newColor;
+        }
+        updateChromatidSVG(elData);
+      };
+    });
+  });
+}
+
+document.querySelectorAll('.color-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const chosenColor = btn.dataset.color;
+    if (activeArmCallback) activeArmCallback(chosenColor);
+    colorModal.style.display = 'none';
+    activeArmCallback = null;
+  });
+});
+
+document.getElementById('closeModal').addEventListener('click', () => {
+  colorModal.style.display = 'none';
+  activeArmCallback = null;
+});
+
+// Event listeners สำหรับหน้าต่างศึกษา
+const mitosisModal = document.getElementById('mitosisModal');
+const meiosisModal = document.getElementById('meiosisModal');
+
+document.getElementById('studyMitosisBtn').addEventListener('click', () => {
+  mitosisModal.style.display = 'flex';
+});
+document.getElementById('closeMitosis').addEventListener('click', () => {
+  mitosisModal.style.display = 'none';
+});
+
+document.getElementById('studyMeiosisBtn').addEventListener('click', () => {
+  meiosisModal.style.display = 'flex';
+});
+document.getElementById('closeMeiosis').addEventListener('click', () => {
+  meiosisModal.style.display = 'none';
+});
+
+// Touch/Click interaction for choosing an arm to rotate
+let activeArmGroup = null;
+
+function makeDraggableBody(elData) {
+  const el = elData.element;
+  let startX, startY, origLeft, origTop, dragging = false;
+
+  function pointerDown(e) {
+    // ป้องกันการลากตัวโครโมโซม หากคลิกโดนแขน (เพื่อเว้นให้แขนหมุนได้)
+    if (e.target.closest && e.target.closest('.arm-group')) return;
+    
+    dragging = true;
+    el.classList.add('dragging');
+    const p = getPoint(e);
+    startX = p.x;
+    startY = p.y;
+    origLeft = elData.x;
+    origTop = elData.y;
+    
+    document.addEventListener('mousemove', pointerMove);
+    document.addEventListener('mouseup', pointerUp);
+    document.addEventListener('touchmove', pointerMove, { passive: false });
+    document.addEventListener('touchend', pointerUp);
+    
+    el.parentNode.appendChild(el);
+    if (e.cancelable) e.preventDefault();
+  }
+
+  function pointerMove(e) {
+    if (!dragging) return;
+    const p = getPoint(e);
+    const dx = p.x - startX;
+    const dy = p.y - startY;
+    
+    elData.x = origLeft + dx;
+    elData.y = origTop + dy;
+    el.style.left = elData.x + 'px';
+    el.style.top = elData.y + 'px';
+    
+    redrawSpindleLines();
+    if (e.cancelable) e.preventDefault();
+  }
+
+  function pointerUp() {
+    if (!dragging) return;
+    dragging = false;
+    el.classList.remove('dragging');
+    
+    document.removeEventListener('mousemove', pointerMove);
+    document.removeEventListener('mouseup', pointerUp);
+    document.removeEventListener('touchmove', pointerMove);
+    document.removeEventListener('touchend', pointerUp);
+    
+    const partnerData = pieces.flatMap(p => [p.a, p.b]).find(item => item.id === elData.partnerId);
+    if (partnerData) {
+      const dx = elData.x - partnerData.x;
+      const dy = elData.y - partnerData.y;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      
+      if (dist < 45 && dist > 0) {
+        elData.x = partnerData.x;
+        elData.y = partnerData.y;
+        el.style.left = elData.x + 'px';
+        el.style.top = elData.y + 'px';
+      }
+    }
+    redrawSpindleLines();
+  }
+
+  el.addEventListener('mousedown', pointerDown);
+  el.addEventListener('touchstart', pointerDown, { passive: false });
+}
+
+function resetLayout() {
+  pieces.forEach(p => {
+    p.a.x = p.initX - 18;
+    p.a.y = p.initY;
+    p.a.element.style.left = p.a.x + 'px';
+    p.a.element.style.top = p.a.y + 'px';
+    
+    p.b.x = p.initX + 18;
+    p.b.y = p.initY;
+    p.b.element.style.left = p.b.x + 'px';
+    p.b.element.style.top = p.b.y + 'px';
+  });
+
+  // รีเซ็ตให้เหลือ centrosome เริ่มต้นเพียง 1 อัน
+  while(centrosomes.length > 1) {
+    const removed = centrosomes.pop();
+    if (removed && removed.element) {
+      removed.element.remove();
+    }
+  }
+
+  if (centrosomes[0]) {
+    centrosomes[0].x = 80; centrosomes[0].y = 300;
+    centrosomes[0].element.style.left = '80px';
+    centrosomes[0].element.style.top = '300px';
+  }
+
+  // ลบ membrane ทั้งหมด
+  membranes.forEach(m => {
+    if (m.element) m.element.remove();
+  });
+  membranes.length = 0;
+
+  spindleLines = [];
+  redrawSpindleLines();
+}
+
+document.getElementById('resetBtn').addEventListener('click', resetLayout);
+
+document.getElementById('splitBtn').addEventListener('click', () => {
+  pieces.forEach(p => {
+    const dx = p.a.x - p.b.x;
+    const dy = p.a.y - p.b.y;
+    if (Math.sqrt(dx*dx + dy*dy) < 8) {
+      p.a.x -= 22;
+      p.b.x += 22;
+      p.a.element.style.left = p.a.x + 'px';
+      p.b.element.style.left = p.b.x + 'px';
+    }
+  });
+  redrawSpindleLines();
+});
+
+document.getElementById('joinBtn').addEventListener('click', () => {
+  pieces.forEach(p => {
+    const midX = (p.a.x + p.b.x) / 2;
+    const midY = (p.a.y + p.b.y) / 2;
+    p.a.x = midX;
+    p.a.y = midY;
+    p.b.x = midX;
+    p.b.y = midY;
+    p.a.element.style.left = p.a.x + 'px';
+    p.a.element.style.top = p.a.y + 'px';
+    p.b.element.style.left = p.b.x + 'px';
+    p.b.element.style.top = p.b.y + 'px';
+  });
+  redrawSpindleLines();
+});
+
+document.getElementById('clearLinesBtn').addEventListener('click', () => {
+  spindleLines = [];
+  redrawSpindleLines();
+});
+
+initCentrosomes();
+resetLayout();
+</script>
+</body>
+</html>
