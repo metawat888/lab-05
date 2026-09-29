@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Chromosome & Chromatid Model</title>
+<title>Chromosome & Chromatid Model 2D</title>
 <style>
   body {
     margin: 0;
@@ -64,7 +64,7 @@
   .piece:active { cursor: grabbing; }
   .piece.dragging { z-index: 100; }
 
-  /* สไตล์สำหรับแขนโครโมโซมที่สามารถคลิกหมุนได้ 360 องศา และดับเบิ้ลคลิกเปลี่ยนสี */
+  /* สไตล์สำหรับแขนโครโมโซมที่สามารถคลิกหมุนได้ */
   .arm-group {
     cursor: pointer;
     transition: filter 0.15s;
@@ -156,10 +156,10 @@
 
   .centrosome {
     position: absolute;
-    width: 32px;
-    height: 32px;
-    background: radial-gradient(circle at 30% 30%, #fff 0%, #fa5252 40%, #c92a2a 80%, #8b0000 100%);
-    border: none;
+    width: 36px;
+    height: 36px;
+    background: #fa5252;
+    border: 2px solid #fff;
     border-radius: 50%;
     cursor: grab;
     user-select: none;
@@ -168,36 +168,35 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 2px 5px 10px rgba(0,0,0,0.3), inset -3px -3px 6px rgba(0,0,0,0.4);
-    transform: translate(-16px, -16px);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.25);
+    transform: translate(-18px, -18px);
   }
   .centrosome:active { cursor: grabbing; }
   .centrosome::after {
     content: '';
-    width: 8px;
-    height: 8px;
-    background: radial-gradient(circle at 30% 30%, #fff 0%, #ced4da 100%);
+    width: 10px;
+    height: 10px;
+    background: #fff;
     border-radius: 50%;
-    box-shadow: 1px 1px 2px rgba(0,0,0,0.5);
   }
   
   /* จุดจับลากเส้นใยจาก Centrosome */
   .spindle-handle {
     position: absolute;
-    top: -4px;
-    right: -4px;
-    width: 18px;
-    height: 18px;
-    background: radial-gradient(circle at 30% 30%, #4dabf7 0%, #1971c2 70%, #0b365e 100%);
-    border: 1px solid #fff;
+    top: -6px;
+    right: -6px;
+    width: 20px;
+    height: 20px;
+    background: #1971c2;
+    border: 2px solid #fff;
     border-radius: 50%;
     cursor: crosshair;
     z-index: 60;
-    box-shadow: 1px 2px 4px rgba(0,0,0,0.4);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
   }
   .spindle-handle:hover {
     transform: scale(1.2);
-    background: radial-gradient(circle at 30% 30%, #74c0fc 0%, #1864ab 70%, #0b365e 100%);
+    background: #1864ab;
   }
 
   /* Nuclear Membrane Style */
@@ -220,14 +219,14 @@
     position: absolute;
     right: 8px;
     bottom: 8px;
-    width: 22px;
-    height: 22px;
-    background: radial-gradient(circle at 30% 30%, #74c0fc 0%, #4c6ef5 70%, #364fc7 100%);
+    width: 24px;
+    height: 24px;
+    background: #4c6ef5;
     border: 2px solid #fff;
     border-radius: 50%;
     cursor: se-resize;
     z-index: 6;
-    box-shadow: 1px 2px 5px rgba(0,0,0,0.4);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
   }
   .nuclear-resize-handle:hover {
     transform: scale(1.2);
@@ -236,7 +235,7 @@
 </head>
 <body>
 
-<h2>Chromosome & Chromatid Model</h2>
+<h2>Chromosome & Chromatid Model 2D</h2>
 
 <div class="toolbar">
   <button id="addCentrosomeBtn" class="primary">+ เพิ่มเซนโทรโซม</button>
@@ -251,7 +250,7 @@
 
 <div id="stage">
   <svg id="spindleLayer" style="position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:1;"></svg>
-  <div class="instruction">คลิกที่ตัวโครมาทิดเพื่อย้าย | ลากจุดสีฟ้าเพื่อโยงเส้นใย | ดับเบิ้ลคลิกแขนเปลี่ยนสี</div>
+  <div class="instruction">แตะแขนโครโมโซมเพื่อหมุน (บน 180° / ล่าง 180°) | ลากจุดสีฟ้าเพื่อโยงเส้นใย | ดับเบิ้ลคลิก/แตะคู่เปลี่ยนสี</div>
 </div>
 
 <!-- Color picker modal -->
@@ -341,44 +340,42 @@ const spindleLayer = document.getElementById('spindleLayer');
 const colorModal = document.getElementById('colorPickerModal');
 let activeArmCallback = null;
 
-// โครโมโซม 4 คู่ สีเทาทั้งหมด แถบยีนหลากหลายแบบ (หนา, กลาง, เล็ก) ขยับมาไว้ด้านบนซ้ายของกรอบเส้นประ
+// โครโมโซมขนาดใหญ่ขึ้น (Scale 1.4 ถึง 1.6) ดีไซน์แบบ 2D แบนเรียบ
 const chromosomes = [
   { 
-    id: 'chr1', color: '#adb5bd', scale: 1.0, initX: 140, initY: 90, 
+    id: 'chr1', color: '#adb5bd', scale: 1.5, initX: 130, initY: 90, 
     topA: -20, botA: -160, topB: 20, botB: 160, 
-    bandsTop: [{ratio: 0.35, width: 8, height: 3}, {ratio: 0.7, width: 4, height: 2}], 
-    bandsBot: [{ratio: 0.25, width: 10, height: 4}, {ratio: 0.55, width: 4, height: 2}, {ratio: 0.8, width: 6, height: 3}] 
+    bandsTop: [{ratio: 0.35, width: 10, height: 4}, {ratio: 0.7, width: 6, height: 3}], 
+    bandsBot: [{ratio: 0.25, width: 12, height: 5}, {ratio: 0.55, width: 6, height: 3}, {ratio: 0.8, width: 8, height: 4}] 
   },
   { 
-    id: 'chr2', color: '#adb5bd', scale: 1.0, initX: 210, initY: 100, 
+    id: 'chr2', color: '#adb5bd', scale: 1.5, initX: 210, initY: 100, 
     topA: -20, botA: -160, topB: 20, botB: 160, 
-    bandsTop: [{ratio: 0.35, width: 8, height: 3}, {ratio: 0.7, width: 4, height: 2}], 
-    bandsBot: [{ratio: 0.25, width: 10, height: 4}, {ratio: 0.55, width: 4, height: 2}, {ratio: 0.8, width: 6, height: 3}] 
+    bandsTop: [{ratio: 0.35, width: 10, height: 4}, {ratio: 0.7, width: 6, height: 3}], 
+    bandsBot: [{ratio: 0.25, width: 12, height: 5}, {ratio: 0.55, width: 6, height: 3}, {ratio: 0.8, width: 8, height: 4}] 
   },
   { 
-    id: 'chr3', color: '#ced4da', scale: 0.85, initX: 155, initY: 300, 
+    id: 'chr3', color: '#ced4da', scale: 1.3, initX: 145, initY: 310, 
     topA: -25, botA: -155, topB: 25, botB: 155, 
-    bandsTop: [{ratio: 0.4, width: 6, height: 3}, {ratio: 0.75, width: 10, height: 4}], 
-    bandsBot: [{ratio: 0.3, width: 4, height: 2}, {ratio: 0.65, width: 8, height: 3}] 
+    bandsTop: [{ratio: 0.4, width: 8, height: 4}, {ratio: 0.75, width: 12, height: 5}], 
+    bandsBot: [{ratio: 0.3, width: 6, height: 3}, {ratio: 0.65, width: 10, height: 4}] 
   },
   { 
-    id: 'chr4', color: '#ced4da', scale: 0.85, initX: 225, initY: 310, 
+    id: 'chr4', color: '#ced4da', scale: 1.3, initX: 225, initY: 320, 
     topA: -25, botA: -155, topB: 25, botB: 155, 
-    bandsTop: [{ratio: 0.4, width: 6, height: 3}, {ratio: 0.75, width: 10, height: 4}], 
-    bandsBot: [{ratio: 0.3, width: 4, height: 2}, {ratio: 0.65, width: 8, height: 3}] 
+    bandsTop: [{ratio: 0.4, width: 8, height: 4}, {ratio: 0.75, width: 12, height: 5}], 
+    bandsBot: [{ratio: 0.3, width: 6, height: 3}, {ratio: 0.65, width: 10, height: 4}] 
   }
 ];
 
 const pieces = [];
-let spindleLines = []; // เก็บรายการเส้นเชื่อม { fromCentrosome, targetItem, x2, y2 }
-let drawingLine = null; // ข้อมูลขณะกำลังลากเส้น
+let spindleLines = [];
+let drawingLine = null;
 
-// Centrosome เริ่มต้น 1 อัน
 const centrosomes = [
   { id: 'centrosome1', x: 80, y: 300, element: null }
 ];
 
-// เก็บรายการ Nuclear Membranes
 const membranes = [];
 
 function initCentrosomes() {
@@ -391,7 +388,6 @@ function createCentrosomeElement(cData) {
   el.style.left = cData.x + 'px';
   el.style.top = cData.y + 'px';
   
-  // ปุ่มจุดสีฟ้าสำหรับลากเส้นเชื่อม
   const handle = document.createElement('div');
   handle.className = 'spindle-handle';
   el.appendChild(handle);
@@ -403,7 +399,6 @@ function createCentrosomeElement(cData) {
   makeSpindleDraggable(handle, cData);
 }
 
-// ปุ่มกดเพิ่ม Centrosome ใหม่
 document.getElementById('addCentrosomeBtn').addEventListener('click', () => {
   const newId = 'centrosome_' + Date.now();
   const newC = {
@@ -416,13 +411,12 @@ document.getElementById('addCentrosomeBtn').addEventListener('click', () => {
   createCentrosomeElement(newC);
 });
 
-// ปุ่มกดเพิ่ม Nuclear Membrane ใหม่
 document.getElementById('addMembraneBtn').addEventListener('click', () => {
   const newM = {
     id: 'membrane_' + Date.now(),
-    x: 220,
-    y: 180,
-    size: 260,
+    x: 180,
+    y: 130,
+    size: 340,
     element: null
   };
   membranes.push(newM);
@@ -523,7 +517,7 @@ function makeResizableMembrane(mData, el, handleEl) {
     const dy = p.y - startY;
     const delta = Math.max(dx, dy);
 
-    let newSize = Math.max(100, origSize + delta);
+    let newSize = Math.max(120, origSize + delta);
     mData.size = newSize;
     el.style.width = newSize + 'px';
     el.style.height = newSize + 'px';
@@ -629,7 +623,7 @@ function makeSpindleDraggable(handleEl, cData) {
           const centX = item.x + 70;
           const centY = item.y + 100;
           const dist = Math.hypot(targetX - centX, targetY - centY);
-          if (dist < 25) {
+          if (dist < 35) {
             connectedTarget = item;
           }
         });
@@ -686,11 +680,11 @@ function redrawSpindleLines() {
       y2 = line.y2;
     }
 
-    svgContent += `<line x1="${cent.x}" y1="${cent.y}" x2="${x2}" y2="${y2}" stroke="#fa5252" stroke-width="2.5" stroke-dasharray="5,5" opacity="0.8"/>`;
+    svgContent += `<line x1="${cent.x}" y1="${cent.y}" x2="${x2}" y2="${y2}" stroke="#fa5252" stroke-width="3" stroke-dasharray="6,6" opacity="0.85"/>`;
   });
 
   if (drawingLine) {
-    svgContent += `<line x1="${drawingLine.startX}" y1="${drawingLine.startY}" x2="${drawingLine.currentX}" y2="${drawingLine.currentY}" stroke="#228be6" stroke-width="2.5" stroke-dasharray="4,4" opacity="0.9"/>`;
+    svgContent += `<line x1="${drawingLine.startX}" y1="${drawingLine.startY}" x2="${drawingLine.currentX}" y2="${drawingLine.currentY}" stroke="#228be6" stroke-width="3" stroke-dasharray="4,4" opacity="0.9"/>`;
   }
 
   spindleLayer.innerHTML = svgContent;
@@ -704,68 +698,46 @@ function updateChromatidSVG(elData) {
 
   let topBandsSvg = '';
   bandsTop.forEach((b) => {
-    topBandsSvg += `<rect x="-7" y="-${L_top * b.ratio}" width="14" height="${b.height}" rx="1" fill="#343a40" opacity="0.85"/>`;
+    topBandsSvg += `<rect x="-${b.width/2}" y="-${L_top * b.ratio}" width="${b.width}" height="${b.height}" rx="1" fill="#343a40" opacity="0.9"/>`;
   });
 
   let botBandsSvg = '';
   bandsBot.forEach((b) => {
-    botBandsSvg += `<rect x="-7" y="-${L_bot * b.ratio}" width="14" height="${b.height}" rx="1" fill="#343a40" opacity="0.85"/>`;
+    botBandsSvg += `<rect x="-${b.width/2}" y="-${L_bot * b.ratio}" width="${b.width}" height="${b.height}" rx="1" fill="#343a40" opacity="0.9"/>`;
   });
 
   const svgContent = `
-    <svg width="140" height="200" viewBox="0 0 140 200" style="overflow:visible; filter: drop-shadow(3px 6px 8px rgba(0,0,0,0.3));">
+    <svg width="140" height="200" viewBox="0 0 140 200" style="overflow:visible; filter: drop-shadow(2px 4px 6px rgba(0,0,0,0.15));">
       <defs>
         <clipPath id="clipTop-${uniqueId}">
-          <rect x="-9" y="-${L_top}" width="18" height="${L_top}" rx="9" />
+          <rect x="-10" y="-${L_top}" width="20" height="${L_top}" rx="10" />
         </clipPath>
         <clipPath id="clipBot-${uniqueId}">
-          <rect x="-9" y="-${L_bot}" width="18" height="${L_bot}" rx="9" />
+          <rect x="-10" y="-${L_bot}" width="20" height="${L_bot}" rx="10" />
         </clipPath>
-        
-        <!-- 3D Shading Gradients -->
-        <linearGradient id="cylinder-${uniqueId}" x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" stop-color="#000" stop-opacity="0.55"/>
-          <stop offset="15%" stop-color="#000" stop-opacity="0.1"/>
-          <stop offset="35%" stop-color="#fff" stop-opacity="0.65"/>
-          <stop offset="55%" stop-color="#fff" stop-opacity="0.1"/>
-          <stop offset="85%" stop-color="#000" stop-opacity="0.25"/>
-          <stop offset="100%" stop-color="#000" stop-opacity="0.75"/>
-        </linearGradient>
-        
-        <radialGradient id="sphere-${uniqueId}" cx="35%" cy="35%" r="65%">
-          <stop offset="0%" stop-color="#ffffff" stop-opacity="0.9"/>
-          <stop offset="25%" stop-color="#ffffff" stop-opacity="0.3"/>
-          <stop offset="70%" stop-color="#000000" stop-opacity="0.6"/>
-          <stop offset="100%" stop-color="#000000" stop-opacity="0.9"/>
-        </radialGradient>
       </defs>
 
-      <!-- แขนบน (p arm) -->
+      <!-- แขนบน (p arm) 2D แบนเรียบ ขอบคมชัด -->
       <g class="arm-group" data-arm="top" transform="translate(70, 100) rotate(${topAngle})">
-        <rect x="-9" y="-${L_top}" width="18" height="${L_top}" rx="9" fill="#212529"/>
-        <rect x="-7" y="-${L_top + 1}" width="14" height="${L_top}" rx="7" fill="${topColor}"/>
+        <rect x="-10" y="-${L_top}" width="20" height="${L_top}" rx="10" fill="#212529"/>
+        <rect x="-8" y="-${L_top + 1}" width="16" height="${L_top}" rx="8" fill="${topColor}"/>
         <g clip-path="url(#clipTop-${uniqueId})">
           ${topBandsSvg}
         </g>
-        <!-- 3D Overlay -->
-        <rect x="-7" y="-${L_top + 1}" width="14" height="${L_top}" rx="7" fill="url(#cylinder-${uniqueId})" pointer-events="none"/>
       </g>
       
-      <!-- แขนล่าง (q arm) -->
+      <!-- แขนล่าง (q arm) 2D แบนเรียบ ขอบคมชัด -->
       <g class="arm-group" data-arm="bot" transform="translate(70, 100) rotate(${botAngle})">
-        <rect x="-9" y="-${L_bot}" width="18" height="${L_bot}" rx="9" fill="#212529"/>
-        <rect x="-7" y="-${L_bot + 1}" width="14" height="${L_bot}" rx="7" fill="${botColor}"/>
+        <rect x="-10" y="-${L_bot}" width="20" height="${L_bot}" rx="10" fill="#212529"/>
+        <rect x="-8" y="-${L_bot + 1}" width="16" height="${L_bot}" rx="8" fill="${botColor}"/>
         <g clip-path="url(#clipBot-${uniqueId})">
           ${botBandsSvg}
         </g>
-        <!-- 3D Overlay -->
-        <rect x="-7" y="-${L_bot + 1}" width="14" height="${L_bot}" rx="7" fill="url(#cylinder-${uniqueId})" pointer-events="none"/>
       </g>
 
-      <!-- เซนโทรเมียร์ (Centromere) 3D -->
-      <circle cx="70" cy="100" r="9" fill="#f8f9fa" stroke="#212529" stroke-width="1.5" />
-      <circle cx="70" cy="100" r="8.5" fill="url(#sphere-${uniqueId})" pointer-events="none" />
-      <circle cx="70" cy="100" r="2.5" fill="#212529" opacity="0.8"/>
+      <!-- เซนโทรเมียร์ (Centromere) 2D ชัดเจน -->
+      <circle cx="70" cy="100" r="10" fill="#212529" />
+      <circle cx="70" cy="100" r="7.5" fill="#f8f9fa" />
     </svg>
   `;
   elData.element.innerHTML = svgContent;
@@ -794,8 +766,8 @@ chromosomes.forEach(c => {
   const idA = c.id + '_left';
   const idB = c.id + '_right';
   
-  const pieceA = createPiece(idA, c.color, c.scale, false, idB, c.topA, c.botA, c.initX - 18, c.initY, c.bandsTop, c.bandsBot);
-  const pieceB = createPiece(idB, c.color, c.scale, true, idA, c.topB, c.botB, c.initX + 18, c.initY, c.bandsTop, c.bandsBot);
+  const pieceA = createPiece(idA, c.color, c.scale, false, idB, c.topA, c.botA, c.initX - 22, c.initY, c.bandsTop, c.bandsBot);
+  const pieceB = createPiece(idB, c.color, c.scale, true, idA, c.topB, c.botB, c.initX + 22, c.initY, c.bandsTop, c.bandsBot);
   
   pieces.push({ a: pieceA, b: pieceB, initX: c.initX, initY: c.initY });
 });
@@ -819,7 +791,6 @@ function bindArmInteractions(elData) {
         const rad = Math.atan2(mY - centerY, mX - centerX);
         let deg = rad * (180 / Math.PI) + 90;
         
-        // ปรับมุมให้อยู่ในช่วง [0, 360)
         while (deg < 0) deg += 360;
         while (deg >= 360) deg -= 360;
 
@@ -887,7 +858,6 @@ document.getElementById('closeModal').addEventListener('click', () => {
   activeArmCallback = null;
 });
 
-// Event listeners สำหรับหน้าต่างศึกษา
 const mitosisModal = document.getElementById('mitosisModal');
 const meiosisModal = document.getElementById('meiosisModal');
 
@@ -905,15 +875,11 @@ document.getElementById('closeMeiosis').addEventListener('click', () => {
   meiosisModal.style.display = 'none';
 });
 
-// Touch/Click interaction for choosing an arm to rotate
-let activeArmGroup = null;
-
 function makeDraggableBody(elData) {
   const el = elData.element;
   let startX, startY, origLeft, origTop, dragging = false;
 
   function pointerDown(e) {
-    // ป้องกันการลากตัวโครโมโซม หากคลิกโดนแขน (เพื่อเว้นให้แขนหมุนได้)
     if (e.target.closest && e.target.closest('.arm-group')) return;
     
     dragging = true;
@@ -964,7 +930,7 @@ function makeDraggableBody(elData) {
       const dy = elData.y - partnerData.y;
       const dist = Math.sqrt(dx*dx + dy*dy);
       
-      if (dist < 45 && dist > 0) {
+      if (dist < 50 && dist > 0) {
         elData.x = partnerData.x;
         elData.y = partnerData.y;
         el.style.left = elData.x + 'px';
@@ -980,18 +946,17 @@ function makeDraggableBody(elData) {
 
 function resetLayout() {
   pieces.forEach(p => {
-    p.a.x = p.initX - 18;
+    p.a.x = p.initX - 22;
     p.a.y = p.initY;
     p.a.element.style.left = p.a.x + 'px';
     p.a.element.style.top = p.a.y + 'px';
     
-    p.b.x = p.initX + 18;
+    p.b.x = p.initX + 22;
     p.b.y = p.initY;
     p.b.element.style.left = p.b.x + 'px';
     p.b.element.style.top = p.b.y + 'px';
   });
 
-  // รีเซ็ตให้เหลือ centrosome เริ่มต้นเพียง 1 อัน
   while(centrosomes.length > 1) {
     const removed = centrosomes.pop();
     if (removed && removed.element) {
@@ -1005,7 +970,6 @@ function resetLayout() {
     centrosomes[0].element.style.top = '300px';
   }
 
-  // ลบ membrane ทั้งหมด
   membranes.forEach(m => {
     if (m.element) m.element.remove();
   });
@@ -1021,9 +985,9 @@ document.getElementById('splitBtn').addEventListener('click', () => {
   pieces.forEach(p => {
     const dx = p.a.x - p.b.x;
     const dy = p.a.y - p.b.y;
-    if (Math.sqrt(dx*dx + dy*dy) < 8) {
-      p.a.x -= 22;
-      p.b.x += 22;
+    if (Math.sqrt(dx*dx + dy*dy) < 10) {
+      p.a.x -= 28;
+      p.b.x += 28;
       p.a.element.style.left = p.a.x + 'px';
       p.b.element.style.left = p.b.x + 'px';
     }
