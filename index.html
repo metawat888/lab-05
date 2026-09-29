@@ -2,7 +2,7 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Flexible Chromosome Simulator - จำลองโครโมโซมปรับโค้งได้</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -10,7 +10,9 @@
         body {
             font-family: 'Prompt', sans-serif;
             user-select: none;
+            -webkit-user-select: none;
             touch-action: none;
+            overflow: hidden;
         }
         canvas {
             display: block;
@@ -29,51 +31,51 @@
 </head>
 <body class="bg-slate-900 text-slate-100 h-screen flex flex-col overflow-hidden">
 
-    <header class="bg-slate-800/95 backdrop-blur border-b border-slate-700 px-4 py-2 flex items-center justify-between shadow-lg z-20 gap-2 shrink-0 select-none">
+    <header class="bg-slate-800/95 backdrop-blur border-b border-slate-700 px-2 sm:px-4 py-2 flex items-center justify-between shadow-lg z-20 gap-1.5 sm:gap-2 shrink-0 select-none">
         <!-- Logo & Title -->
-        <div class="flex items-center space-x-2.5 shrink-0">
+        <div class="flex items-center space-x-1.5 sm:space-x-2.5 shrink-0">
             <div class="bg-indigo-600 p-1.5 rounded-lg text-white shadow-lg shadow-indigo-500/30">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
                 </svg>
             </div>
             <div>
-                <h1 class="text-xs font-bold bg-gradient-to-r from-indigo-400 to-pink-400 bg-clip-text text-transparent">Chromosome Builder</h1>
+                <h1 class="text-[10px] sm:text-xs font-bold bg-gradient-to-r from-indigo-400 to-pink-400 bg-clip-text text-transparent">Chromosome Builder</h1>
             </div>
         </div>
         
-        <!-- Single-Row Unified Control Bar -->
-        <div class="flex items-center space-x-2 overflow-x-auto py-0.5 no-scrollbar">
+        <!-- Single-Row Unified Control Bar with Smooth Mobile Touch Scroll -->
+        <div class="flex items-center space-x-1.5 sm:space-x-2 overflow-x-auto py-0.5 no-scrollbar touch-pan-x" style="-webkit-overflow-scrolling: touch; pointer-events: auto;">
             <!-- Add buttons -->
-            <div class="flex items-center space-x-1 shrink-0 border-r border-slate-700 pr-2">
-                <button onclick="app.addSegmentedChromosome()" class="bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-medium px-2.5 py-1 rounded-lg shadow transition flex items-center space-x-1">
+            <div class="flex items-center space-x-1 shrink-0 border-r border-slate-700 pr-1.5 sm:pr-2">
+                <button onclick="app.addSegmentedChromosome()" class="bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] sm:text-[11px] font-medium px-2 sm:px-2.5 py-1 rounded-lg shadow transition flex items-center space-x-0.5 sm:space-x-1 shrink-0">
                     <span>+ เดี่ยว</span>
                 </button>
-                <button onclick="app.addXChromosome()" class="bg-pink-600 hover:bg-pink-500 text-white text-[11px] font-medium px-2.5 py-1 rounded-lg shadow transition flex items-center space-x-1">
+                <button onclick="app.addXChromosome()" class="bg-pink-600 hover:bg-pink-500 text-white text-[10px] sm:text-[11px] font-medium px-2 sm:px-2.5 py-1 rounded-lg shadow transition flex items-center space-x-0.5 sm:space-x-1 shrink-0">
                     <span>+ X-Shape</span>
                 </button>
-                <button onclick="app.addCentrosome()" class="bg-amber-600 hover:bg-amber-500 text-white text-[11px] font-medium px-2.5 py-1 rounded-lg shadow transition flex items-center space-x-1">
-                    <span>+ เซนโทรโซม</span>
+                <button onclick="app.addCentrosome()" class="bg-amber-600 hover:bg-amber-500 text-white text-[10px] sm:text-[11px] font-medium px-2 sm:px-2.5 py-1 rounded-lg shadow transition flex items-center space-x-0.5 sm:space-x-1 shrink-0">
+                    <span>+ เซนโทรฯ</span>
                 </button>
-                <button onclick="app.addNuclearMembrane()" class="bg-violet-600 hover:bg-violet-500 text-white text-[11px] font-medium px-2.5 py-1 rounded-lg shadow transition flex items-center space-x-1">
+                <button onclick="app.addNuclearMembrane()" class="bg-violet-600 hover:bg-violet-500 text-white text-[10px] sm:text-[11px] font-medium px-2 sm:px-2.5 py-1 rounded-lg shadow transition flex items-center space-x-0.5 sm:space-x-1 shrink-0">
                     <span>+ เยื่อหุ้ม</span>
                 </button>
-                <button onclick="app.toggleFiberMode()" id="btn-fiber-mode" class="bg-slate-700 hover:bg-slate-600 text-amber-300 text-[11px] font-medium px-2.5 py-1 rounded-lg shadow transition flex items-center space-x-1 border border-amber-500/30">
+                <button onclick="app.toggleFiberMode()" id="btn-fiber-mode" class="bg-slate-700 hover:bg-slate-600 text-amber-300 text-[10px] sm:text-[11px] font-medium px-2 sm:px-2.5 py-1 rounded-lg shadow transition flex items-center space-x-0.5 sm:space-x-1 border border-amber-500/30 shrink-0">
                     <span>🔗 ลากเส้น</span>
                 </button>
-                <button onclick="app.clearAll()" class="bg-slate-700 hover:bg-slate-600 text-slate-300 text-[11px] font-medium px-2 py-1 rounded-lg transition">
+                <button onclick="app.clearAll()" class="bg-slate-700 hover:bg-slate-600 text-slate-300 text-[10px] sm:text-[11px] font-medium px-1.5 sm:px-2 py-1 rounded-lg transition shrink-0">
                     ล้าง
                 </button>
             </div>
 
             <!-- Selection Inspector Controls (Single row inline) -->
-            <div id="no-selection" class="text-[11px] text-slate-400 italic px-1 shrink-0">
+            <div id="no-selection" class="text-[10px] sm:text-[11px] text-slate-400 italic px-1 shrink-0 whitespace-nowrap">
                 (คลิกวัตถุเพื่อควบคุม)
             </div>
 
-            <div id="selection-controls" class="hidden flex items-center space-x-2 text-[11px] shrink-0">
+            <div id="selection-controls" class="hidden flex items-center space-x-1.5 sm:space-x-2 text-[10px] sm:text-[11px] shrink-0">
                 <!-- Color Picker 1 -->
-                <div id="color1-container" class="flex items-center space-x-1 bg-slate-800/80 px-2 py-0.5 rounded-lg border border-slate-700">
+                <div id="color1-container" class="flex items-center space-x-1 bg-slate-800/80 px-1.5 sm:px-2 py-0.5 rounded-lg border border-slate-700 shrink-0">
                     <span id="label-color1" class="text-slate-400">สี 1:</span>
                     <button onclick="app.setColor1('#6366f1')" class="w-3 h-3 rounded-full bg-indigo-500 ring-1 ring-white/30 hover:scale-125 transition"></button>
                     <button onclick="app.setColor1('#ec4899')" class="w-3 h-3 rounded-full bg-pink-500 ring-1 ring-white/30 hover:scale-125 transition"></button>
@@ -83,7 +85,7 @@
                 </div>
 
                 <!-- Color Picker 2 -->
-                <div id="color2-container" class="flex items-center space-x-1 bg-slate-800/80 px-2 py-0.5 rounded-lg border border-slate-700">
+                <div id="color2-container" class="flex items-center space-x-1 bg-slate-800/80 px-1.5 sm:px-2 py-0.5 rounded-lg border border-slate-700 shrink-0">
                     <span id="label-color2" class="text-slate-400">สี 2:</span>
                     <button onclick="app.setColor2('#6366f1')" class="w-3 h-3 rounded-full bg-indigo-500 ring-1 ring-white/30 hover:scale-125 transition"></button>
                     <button onclick="app.setColor2('#ec4899')" class="w-3 h-3 rounded-full bg-pink-500 ring-1 ring-white/30 hover:scale-125 transition"></button>
@@ -93,52 +95,52 @@
                 </div>
 
                 <!-- Length slider (สั้น-ยาว) -->
-                <div id="length-container" class="flex items-center space-x-1 bg-slate-800/80 px-2 py-0.5 rounded-lg border border-slate-700">
+                <div id="length-container" class="flex items-center space-x-1 bg-slate-800/80 px-1.5 sm:px-2 py-0.5 rounded-lg border border-slate-700 shrink-0">
                     <span class="text-slate-400">ยาว:</span>
-                    <input type="range" id="input-length" min="80" max="280" value="160" class="w-16 accent-indigo-500 h-1" oninput="app.setLength(this.value)">
+                    <input type="range" id="input-length" min="80" max="280" value="160" class="w-14 sm:w-16 accent-indigo-500 h-1" oninput="app.setLength(this.value)">
                 </div>
 
                 <!-- Segments slider -->
-                <div id="segments-container" class="flex items-center space-x-1 bg-slate-800/80 px-2 py-0.5 rounded-lg border border-slate-700">
+                <div id="segments-container" class="flex items-center space-x-1 bg-slate-800/80 px-1.5 sm:px-2 py-0.5 rounded-lg border border-slate-700 shrink-0">
                     <span class="text-slate-400">ข้อต่อ:</span>
-                    <input type="range" id="input-segments" min="4" max="16" value="8" class="w-12 accent-indigo-500 h-1" oninput="app.setSegments(this.value)">
+                    <input type="range" id="input-segments" min="4" max="16" value="8" class="w-10 sm:w-12 accent-indigo-500 h-1" oninput="app.setSegments(this.value)">
                 </div>
 
                 <!-- Membrane Size slider -->
-                <div id="membrane-size-container" class="hidden flex items-center space-x-1 bg-slate-800/80 px-2 py-0.5 rounded-lg border border-slate-700">
+                <div id="membrane-size-container" class="hidden flex items-center space-x-1 bg-slate-800/80 px-1.5 sm:px-2 py-0.5 rounded-lg border border-slate-700 shrink-0">
                     <span class="text-slate-400">ขนาด:</span>
-                    <input type="range" id="input-membrane-size" min="100" max="350" value="180" class="w-16 accent-violet-500 h-1" oninput="app.setMembraneSize(this.value)">
+                    <input type="range" id="input-membrane-size" min="100" max="350" value="180" class="w-14 sm:w-16 accent-violet-500 h-1" oninput="app.setMembraneSize(this.value)">
                 </div>
 
                 <!-- Action buttons -->
-                <div class="flex items-center space-x-1">
-                    <button id="btn-duplicate" onclick="app.duplicateSelected()" class="bg-slate-700 hover:bg-slate-600 text-slate-200 px-2 py-0.5 rounded transition">สำเนา</button>
-                    <button onclick="app.deleteSelected()" class="bg-red-500/20 hover:bg-red-500/30 text-red-400 px-2 py-0.5 rounded transition">ลบ</button>
+                <div class="flex items-center space-x-1 shrink-0">
+                    <button id="btn-duplicate" onclick="app.duplicateSelected()" class="bg-slate-700 hover:bg-slate-600 text-slate-200 px-1.5 sm:px-2 py-0.5 rounded transition">สำเนา</button>
+                    <button onclick="app.deleteSelected()" class="bg-red-500/20 hover:bg-red-500/30 text-red-400 px-1.5 sm:px-2 py-0.5 rounded transition">ลบ</button>
                 </div>
             </div>
 
             <!-- Nodes Toggle -->
-            <div class="flex items-center space-x-1 bg-slate-800/80 px-2 py-0.5 rounded-lg border border-slate-700 shrink-0">
-                <span class="text-slate-400 text-[11px]">ข้อต่อ</span>
+            <div class="flex items-center space-x-1 bg-slate-800/80 px-1.5 sm:px-2 py-0.5 rounded-lg border border-slate-700 shrink-0">
+                <span class="text-slate-400 text-[10px] sm:text-[11px]">ข้อต่อ</span>
                 <input type="checkbox" id="toggle-nodes" checked onchange="app.toggleNodes(this.checked)" class="accent-indigo-500 w-3 h-3 rounded">
             </div>
         </div>
 
         <!-- Developer Credit Badge -->
-        <div class="flex items-center space-x-2 bg-slate-900/80 px-2.5 py-1 rounded-xl border border-slate-700/60 shadow-md shrink-0">
-            <img src="https://github.com/metawat888/Picture/raw/69f9d3a46e017adc43abb8db3503ea8106ecae61/97488303_2887790847941184_353651305119481856_n.jpg" alt="นายเมธาวัฒน์ พงสะพัง" class="w-6 h-6 rounded-full object-cover ring-2 ring-indigo-500/50" onerror="this.src='https://placehold.co/40x40/6366f1/ffffff?text=M'">
-            <div class="text-left">
-                <p class="text-[9px] text-slate-400 leading-tight">พัฒนาโดย</p>
-                <p class="text-[11px] font-medium text-slate-200 leading-tight">นายเมธาวัฒน์ พงสะพัง</p>
+        <div class="flex items-center space-x-1.5 sm:space-x-2 bg-slate-900/80 px-2 py-1 rounded-xl border border-slate-700/60 shadow-md shrink-0">
+            <img src="https://github.com/metawat888/Picture/raw/69f9d3a46e017adc43abb8db3503ea8106ecae61/97488303_2887790847941184_353651305119481856_n.jpg" alt="นายเมธาวัฒน์ พงสะพัง" class="w-5 h-5 sm:w-6 sm:h-6 rounded-full object-cover ring-2 ring-indigo-500/50" onerror="this.src='https://placehold.co/40x40/6366f1/ffffff?text=M'">
+            <div class="text-left hidden md:block">
+                <p class="text-[8px] sm:text-[9px] text-slate-400 leading-tight">พัฒนาโดย</p>
+                <p class="text-[10px] sm:text-[11px] font-medium text-slate-200 leading-tight">นายเมธาวัฒน์ พงสะพัง</p>
             </div>
         </div>
     </header>
 
     <main class="flex-1 relative bg-slate-950 overflow-hidden cursor-crosshair">
         <canvas id="simCanvas" class="w-full h-full block"></canvas>
-        <div class="absolute bottom-4 left-4 bg-slate-900/80 backdrop-blur border border-slate-700/50 px-4 py-2 rounded-xl text-xs text-slate-400 pointer-events-none flex items-center space-x-2 shadow-lg">
-            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span>💡 เคล็ดลับ: แผงควบคุมด้านบนถูกตรึงไว้กับที่เพื่อความสะดวกในการใช้งาน</span>
+        <div class="absolute bottom-3 left-3 right-3 sm:left-4 sm:right-auto bg-slate-900/80 backdrop-blur border border-slate-700/50 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl text-[11px] sm:text-xs text-slate-400 pointer-events-none flex items-center space-x-2 shadow-lg">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0"></span>
+            <span>💡 แตะและลากเพื่อเคลื่อนย้ายหรือดัดโครโมโซมบนมือถือ/แท็บเล็ตได้ทันที</span>
         </div>
     </main>
 
@@ -211,7 +213,7 @@
             }
 
             contains(x, y) {
-                return this.pos.dist(new Vector2D(x, y)) < this.radius + 6;
+                return this.pos.dist(new Vector2D(x, y)) < this.radius + 10;
             }
 
             translate(dx, dy) {
@@ -254,7 +256,7 @@
             constructor(x, y, segments = 8, length = 160, color1 = '#6366f1', color2 = '#ec4899', thickness = 16) {
                 this.color1 = color1;
                 this.color2 = color2;
-                this.thickness = thickness; // Fixed thickness, length adjustable
+                this.thickness = thickness;
                 this.segmentsCount = segments;
                 this.nodes = [];
                 this.sticks = [];
@@ -306,7 +308,6 @@
                 let midX = (currentTop.x + currentBot.x) / 2;
                 let midY = (currentTop.y + currentBot.y) / 2;
                 
-                // Direction vector
                 let dir = currentBot.sub(currentTop);
                 let currentLen = dir.mag();
                 if (currentLen === 0) {
@@ -544,7 +545,7 @@
             }
 
             contains(x, y) {
-                let hitDist = this.thickness + 12;
+                let hitDist = this.thickness + 16;
                 for (let node of this.nodes) {
                     if (node.pos.dist(new Vector2D(x, y)) < hitDist) return true;
                 }
@@ -677,8 +678,8 @@
             initListeners() {
                 const getPos = (e) => {
                     const rect = this.canvas.getBoundingClientRect();
-                    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-                    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                    const clientX = e.touches && e.touches.length > 0 ? e.touches[0].clientX : (e.changedTouches && e.changedTouches.length > 0 ? e.changedTouches[0].clientX : e.clientX);
+                    const clientY = e.touches && e.touches.length > 0 ? e.touches[0].clientY : (e.changedTouches && e.changedTouches.length > 0 ? e.changedTouches[0].clientY : e.clientY);
                     return new Vector2D(clientX - rect.left, clientY - rect.top);
                 };
 
@@ -688,7 +689,7 @@
 
                     if (this.fiberModeActive && this.selectedCentrosome) {
                         let closestNode = null;
-                        let minD = 50;
+                        let minD = 60;
                         for (let chrom of this.chromosomes) {
                             let allNodes = [...chrom.nodes];
                             if (chrom.nodes2) allNodes.push(...chrom.nodes2);
@@ -737,7 +738,7 @@
                         if (this.selectedChromosome.nodes2) allNodes.push(...this.selectedChromosome.nodes2);
                         
                         for (let node of allNodes) {
-                            if (node.pos.dist(pos) < 22) {
+                            if (node.pos.dist(pos) < 26) {
                                 this.activeNode = node;
                                 this.activeNode.pinned = true;
                                 this.dragMode = 'node';
@@ -800,8 +801,8 @@
                 window.addEventListener('mouseup', onUp);
 
                 this.canvas.addEventListener('touchstart', (e) => { onDown(e); e.preventDefault(); }, {passive: false});
-                window.addEventListener('touchmove', (e) => { onMove(e); e.preventDefault(); }, {passive: false});
-                window.addEventListener('touchend', onUp);
+                this.canvas.addEventListener('touchmove', (e) => { onMove(e); e.preventDefault(); }, {passive: false});
+                this.canvas.addEventListener('touchend', (e) => { onUp(e); e.preventDefault(); }, {passive: false});
             }
 
             selectChromosome(chrom) {
@@ -839,11 +840,11 @@
                     if (membraneSizeContainer) membraneSizeContainer.style.display = 'none';
 
                     if (this.selectedChromosome.isXShape) {
-                        if (labelColor1) labelColor1.innerText = 'สีโครมาทิด 1:';
-                        if (labelColor2) labelColor2.innerText = 'สีโครมาทิด 2:';
+                        if (labelColor1) labelColor1.innerText = 'สี 1:';
+                        if (labelColor2) labelColor2.innerText = 'สี 2:';
                     } else {
-                        if (labelColor1) labelColor1.innerText = 'สีครึ่งบน:';
-                        if (labelColor2) labelColor2.innerText = 'สีครึ่งล่าง:';
+                        if (labelColor1) labelColor1.innerText = 'สีบน:';
+                        if (labelColor2) labelColor2.innerText = 'สีล่าง:';
                     }
 
                     const inputLen = document.getElementById('input-length');
