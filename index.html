@@ -63,6 +63,15 @@
                 <button onclick="app.toggleFiberMode()" id="btn-fiber-mode" class="bg-slate-700 hover:bg-slate-600 text-amber-300 text-[10px] sm:text-[11px] font-medium px-2 sm:px-2.5 py-1 rounded-lg shadow transition flex items-center space-x-0.5 sm:space-x-1 border border-amber-500/30 shrink-0">
                     <span>🔗 ลากเส้น</span>
                 </button>
+                <button onclick="app.zoomIn()" class="bg-slate-700 hover:bg-slate-600 text-slate-200 text-[10px] sm:text-[11px] font-medium px-2 sm:px-2 py-1 rounded-lg shadow transition shrink-0 flex items-center space-x-0.5" title="ขยาย">
+                    <span>🔍+</span>
+                </button>
+                <button onclick="app.zoomOut()" class="bg-slate-700 hover:bg-slate-600 text-slate-200 text-[10px] sm:text-[11px] font-medium px-2 sm:px-2 py-1 rounded-lg shadow transition shrink-0 flex items-center space-x-0.5" title="ย่อ">
+                    <span>🔍-</span>
+                </button>
+                <button onclick="app.resetZoom()" id="zoom-indicator" class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] sm:text-[11px] font-mono px-1.5 py-1 rounded-lg border border-slate-700 transition shrink-0" title="รีเซ็ตเป็น 100%">
+                    100%
+                </button>
                 <button onclick="app.clearAll()" class="bg-slate-700 hover:bg-slate-600 text-slate-300 text-[10px] sm:text-[11px] font-medium px-1.5 sm:px-2 py-1 rounded-lg transition shrink-0">
                     ล้าง
                 </button>
@@ -114,6 +123,7 @@
 
                 <!-- Action buttons -->
                 <div class="flex items-center space-x-1 shrink-0">
+                    <button id="btn-split" onclick="app.splitSelected()" class="hidden bg-purple-600 hover:bg-purple-500 text-white px-1.5 sm:px-2 py-0.5 rounded transition">แยกร่าง</button>
                     <button id="btn-duplicate" onclick="app.duplicateSelected()" class="bg-slate-700 hover:bg-slate-600 text-slate-200 px-1.5 sm:px-2 py-0.5 rounded transition">สำเนา</button>
                     <button onclick="app.deleteSelected()" class="bg-red-500/20 hover:bg-red-500/30 text-red-400 px-1.5 sm:px-2 py-0.5 rounded transition">ลบ</button>
                 </div>
@@ -587,12 +597,37 @@
                 this.showNodes = true;
                 this.fiberModeActive = false;
                 
+                this.zoomLevel = 1.0;
+                this.pinchStartDist = null;
+
                 this.dragMode = null;
                 this.lastMousePos = new Vector2D(0, 0);
 
                 this.initCanvasSize();
                 this.initListeners();
                 this.animate();
+            }
+
+            zoomIn() {
+                this.zoomLevel = Math.min(3.0, parseFloat((this.zoomLevel + 0.15).toFixed(2)));
+                this.updateZoomIndicator();
+            }
+
+            zoomOut() {
+                this.zoomLevel = Math.max(0.4, parseFloat((this.zoomLevel - 0.15).toFixed(2)));
+                this.updateZoomIndicator();
+            }
+
+            resetZoom() {
+                this.zoomLevel = 1.0;
+                this.updateZoomIndicator();
+            }
+
+            updateZoomIndicator() {
+                const el = document.getElementById('zoom-indicator');
+                if (el) {
+                    el.innerText = `${Math.round(this.zoomLevel * 100)}%`;
+                }
             }
 
             initCanvasSize() {
@@ -655,13 +690,47 @@
                 this.updateInspector();
             }
 
+            showNotification(msg, type = 'success') {
+                const notif = document.createElement('div');
+                const bgColor = type === 'warning' ? 'bg-amber-600' : 'bg-indigo-600';
+                notif.className = `absolute top-16 left-1/2 -translate-x-1/2 ${bgColor} text-white text-[10px] sm:text-xs px-4 py-2 rounded-xl shadow-xl z-50 transition animate-bounce whitespace-nowrap`;
+                notif.innerText = msg;
+                document.body.appendChild(notif);
+                setTimeout(() => {
+                    notif.style.opacity = '0';
+                    notif.style.transition = 'opacity 0.3s ease';
+                    setTimeout(() => notif.remove(), 300);
+                }, 2500);
+            }
+
+            mergeChromosomes(c1, c2) {
+                // Find middle position and average length
+                let midPos = c1.getCentromerePos().add(c2.getCentromerePos()).mult(0.5);
+                let avgLength = (c1.getTotalLength() + c2.getTotalLength()) / 2;
+                
+                // Create new X-Shape using colors from both single chromosomes
+                let newChrom = Chromosome.createXShape(midPos.x, midPos.y, c1.color1, c2.color1, c1.thickness);
+                newChrom.setLength(avgLength);
+                
+                // Re-assign any connected spindle fibers to the new centromere
+                let newCentromereNode = newChrom.nodes[Math.floor(newChrom.nodes.length / 2)];
+                for (let f of this.spindleFibers) {
+                    if (c1.nodes.includes(f.targetNode) || c2.nodes.includes(f.targetNode)) {
+                        f.targetNode = newCentromereNode;
+                    }
+                }
+                
+                // Remove the old separate chromosomes and add the newly merged one
+                this.chromosomes = this.chromosomes.filter(c => c !== c1 && c !== c2);
+                this.chromosomes.push(newChrom);
+                this.selectChromosome(newChrom);
+                
+                this.showNotification('✨ รวมร่างเป็น X-Shape สำเร็จ!');
+            }
+
             toggleFiberMode() {
                 if (!this.selectedCentrosome) {
-                    const notif = document.createElement('div');
-                    notif.className = 'absolute top-16 left-1/2 -translate-x-1/2 bg-amber-600 text-white text-xs px-4 py-2 rounded-xl shadow-xl z-50 transition animate-bounce';
-                    notif.innerText = '⚠️ กรุณาคลิกเลือกเซนโทรโซมก่อนเปิดโหมดลากเส้นเชื่อม';
-                    document.body.appendChild(notif);
-                    setTimeout(() => notif.remove(), 2500);
+                    this.showNotification('⚠️ กรุณาคลิกเลือกเซนโทรโซมก่อนเปิดโหมดลากเส้นเชื่อม', 'warning');
                     return;
                 }
                 this.fiberModeActive = !this.fiberModeActive;
@@ -680,10 +749,26 @@
                     const rect = this.canvas.getBoundingClientRect();
                     const clientX = e.touches && e.touches.length > 0 ? e.touches[0].clientX : (e.changedTouches && e.changedTouches.length > 0 ? e.changedTouches[0].clientX : e.clientX);
                     const clientY = e.touches && e.touches.length > 0 ? e.touches[0].clientY : (e.changedTouches && e.changedTouches.length > 0 ? e.changedTouches[0].clientY : e.clientY);
-                    return new Vector2D(clientX - rect.left, clientY - rect.top);
+                    
+                    let screenX = clientX - rect.left;
+                    let screenY = clientY - rect.top;
+
+                    let cx = this.logicalWidth / 2;
+                    let cy = this.logicalHeight / 2;
+                    let worldX = (screenX - cx) / this.zoomLevel + cx;
+                    let worldY = (screenY - cy) / this.zoomLevel + cy;
+
+                    return new Vector2D(worldX, worldY);
                 };
 
                 const onDown = (e) => {
+                    if (e.touches && e.touches.length === 2) {
+                        let dx = e.touches[0].clientX - e.touches[1].clientX;
+                        let dy = e.touches[0].clientY - e.touches[1].clientY;
+                        this.pinchStartDist = Math.sqrt(dx * dx + dy * dy);
+                        return;
+                    }
+
                     let pos = getPos(e);
                     this.lastMousePos = pos;
 
@@ -771,6 +856,19 @@
                 };
 
                 const onMove = (e) => {
+                    if (e.touches && e.touches.length === 2 && this.pinchStartDist) {
+                        let dx = e.touches[0].clientX - e.touches[1].clientX;
+                        let dy = e.touches[0].clientY - e.touches[1].clientY;
+                        let dist = Math.sqrt(dx * dx + dy * dy);
+                        let factor = dist / this.pinchStartDist;
+                        if (Math.abs(factor - 1) > 0.05) {
+                            if (factor > 1) this.zoomIn();
+                            else this.zoomOut();
+                            this.pinchStartDist = dist;
+                        }
+                        return;
+                    }
+
                     let pos = getPos(e);
                     let delta = pos.sub(this.lastMousePos);
                     this.lastMousePos = pos;
@@ -787,10 +885,30 @@
                 };
 
                 const onUp = (e) => {
+                    this.pinchStartDist = null;
                     if (this.activeNode) {
                         this.activeNode.pinned = false;
                         this.activeNode = null;
                     }
+
+                    // Check for chromosome merging (Single + Single -> X-Shape)
+                    if (this.selectedChromosome && !this.selectedChromosome.isXShape) {
+                        let c1 = this.selectedChromosome;
+                        let c1Mid = c1.getCentromerePos();
+                        
+                        for (let i = 0; i < this.chromosomes.length; i++) {
+                            let c2 = this.chromosomes[i];
+                            if (c1 !== c2 && !c2.isXShape) {
+                                let c2Mid = c2.getCentromerePos();
+                                // Snap and merge if centromeres are closer than 40 pixels
+                                if (c1Mid.dist(c2Mid) < 40) {
+                                    this.mergeChromosomes(c1, c2);
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
                     if (!this.fiberModeActive) {
                         this.dragMode = null;
                     }
@@ -825,10 +943,12 @@
                 const labelColor1 = document.getElementById('label-color1');
                 const labelColor2 = document.getElementById('label-color2');
                 const btnDup = document.getElementById('btn-duplicate');
+                const btnSplit = document.getElementById('btn-split');
 
                 if (!this.selectedChromosome && !this.selectedCentrosome && !this.selectedMembrane) {
                     if (noSel) noSel.classList.remove('hidden');
                     if (selControls) selControls.classList.add('hidden');
+                    if (btnSplit) btnSplit.style.display = 'none';
                 } else if (this.selectedChromosome) {
                     if (noSel) noSel.classList.add('hidden');
                     if (selControls) selControls.style.display = 'flex';
@@ -838,6 +958,10 @@
                     if (btnDup) btnDup.style.display = 'inline-block';
                     if (color2Container) color2Container.style.display = 'flex';
                     if (membraneSizeContainer) membraneSizeContainer.style.display = 'none';
+
+                    if (btnSplit) {
+                        btnSplit.style.display = this.selectedChromosome.isXShape ? 'inline-block' : 'none';
+                    }
 
                     if (this.selectedChromosome.isXShape) {
                         if (labelColor1) labelColor1.innerText = 'สี 1:';
@@ -861,6 +985,7 @@
                     if (color2Container) color2Container.style.display = 'none';
                     if (membraneSizeContainer) membraneSizeContainer.style.display = 'none';
                     if (btnDup) btnDup.style.display = 'none';
+                    if (btnSplit) btnSplit.style.display = 'none';
                 } else if (this.selectedMembrane) {
                     if (noSel) noSel.classList.add('hidden');
                     if (selControls) selControls.style.display = 'flex';
@@ -870,6 +995,7 @@
                     if (color2Container) color2Container.style.display = 'none';
                     if (membraneSizeContainer) membraneSizeContainer.style.display = 'flex';
                     if (btnDup) btnDup.style.display = 'none';
+                    if (btnSplit) btnSplit.style.display = 'none';
 
                     const inputMem = document.getElementById('input-membrane-size');
                     if (inputMem) inputMem.value = this.selectedMembrane.radius;
@@ -940,6 +1066,55 @@
                 }
             }
 
+            splitSelected() {
+                if (!this.selectedChromosome || !this.selectedChromosome.isXShape) {
+                    this.showNotification('⚠️ สามารถแยกร่างได้เฉพาะโครโมโซม X-Shape เท่านั้น', 'warning');
+                    return;
+                }
+
+                let c = this.selectedChromosome;
+                let len = c.getTotalLength();
+                let segs = c.nodes.length - 1;
+                let center = c.getCentromerePos();
+
+                // Create Sister Chromatid 1 (left strand)
+                let chrom1 = new Chromosome(center.x - 30, center.y, segs, len, c.color1, c.color1, c.thickness);
+                for (let i = 0; i < c.nodes.length; i++) {
+                    chrom1.nodes[i].pos = new Vector2D(c.nodes[i].pos.x - 25, c.nodes[i].pos.y);
+                }
+
+                // Create Sister Chromatid 2 (right strand)
+                let chrom2 = new Chromosome(center.x + 30, center.y, segs, len, c.color2, c.color2, c.thickness);
+                if (c.nodes2) {
+                    for (let i = 0; i < c.nodes2.length; i++) {
+                        chrom2.nodes[i].pos = new Vector2D(c.nodes2[i].pos.x + 25, c.nodes2[i].pos.y);
+                    }
+                }
+
+                // Re-bind Spindle Fibers to the newly separated chromosomes
+                for (let f of this.spindleFibers) {
+                    let idx1 = c.nodes.indexOf(f.targetNode);
+                    if (idx1 !== -1) {
+                        f.targetNode = chrom1.nodes[idx1];
+                    }
+                    if (c.nodes2) {
+                        let idx2 = c.nodes2.indexOf(f.targetNode);
+                        if (idx2 !== -1) {
+                            f.targetNode = chrom2.nodes[idx2];
+                        }
+                    }
+                }
+
+                // Replace X-Shape with two single chromosomes
+                let idx = this.chromosomes.indexOf(c);
+                if (idx !== -1) {
+                    this.chromosomes.splice(idx, 1, chrom1, chrom2);
+                }
+
+                this.selectChromosome(chrom1);
+                this.showNotification('✂️ จำลองระยะ Anaphase: แยก Sister Chromatids ออกเป็น 2 แท่งเรียบร้อย!');
+            }
+
             deleteSelected() {
                 if (this.selectedChromosome) {
                     this.chromosomes = this.chromosomes.filter(item => item !== this.selectedChromosome);
@@ -969,6 +1144,13 @@
 
                     this.ctx.clearRect(0, 0, this.logicalWidth, this.logicalHeight);
 
+                    this.ctx.save();
+                    let cx = this.logicalWidth / 2;
+                    let cy = this.logicalHeight / 2;
+                    this.ctx.translate(cx, cy);
+                    this.ctx.scale(this.zoomLevel, this.zoomLevel);
+                    this.ctx.translate(-cx, -cy);
+
                     // Draw nuclear membranes
                     for (let nm of this.nuclearMembranes) {
                         nm.draw(this.ctx, nm === this.selectedMembrane);
@@ -996,6 +1178,8 @@
                     for (let chrom of this.chromosomes) {
                         chrom.draw(this.ctx, this.showNodes, chrom === this.selectedChromosome);
                     }
+
+                    this.ctx.restore();
 
                     requestAnimationFrame(updateLoop);
                 };
